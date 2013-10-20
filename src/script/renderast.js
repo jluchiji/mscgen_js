@@ -21,8 +21,18 @@ the associate line, we'll need to do something like this:
   <line x1="50" y1="20" x2="210" y2="20" stroke-width="2" stroke="#ABCDEF" marker-end="url(#end)"/>
 </g>
 </svg>
+
+@author Sander Verweij 
+@version 481
  */
-define(["renderutensils"], function(utl) {
+
+/* jshint undef:true */
+/* jshint unused:strict */
+/* jshint browser:true */
+/* jshint trailing:true */
+/* global define */
+
+define(["renderutensils", "node/textutensils"], function(utl, txt) {
 
 var PAD_VERTICAL = 3;
 var PAD_HORIZONTAL = 3;
@@ -30,7 +40,8 @@ var DEFAULT_INTER_ENTITY_SPACING = 160;
 var INTER_ENTITY_SPACING = DEFAULT_INTER_ENTITY_SPACING;
 var DEFAULT_ENTITY_WIDTH = 100;
 var ENTITY_WIDTH = DEFAULT_ENTITY_WIDTH;
-var ENTITY_HEIGHT = 34;
+var DEFAULT_ENTITY_HEIGHT = 34;
+var ENTITY_HEIGHT = DEFAULT_ENTITY_HEIGHT;
 var DEFAULT_ARCROW_HEIGHT = 38;
 var LINE_WIDTH = 2; // TODO: === to use in the css
 var ARCROW_HEIGHT = DEFAULT_ARCROW_HEIGHT;
@@ -44,8 +55,8 @@ var DIR_BOTH = 5;
 var DIR_NONE = 8;
 
 var gEntityXHWM = 0;
-var gEntity2X = new Object();
-var gEntity2ArcColor = new Object();
+var gEntity2X = {};
+var gEntity2ArcColor = {};
 var gTextHeight = 12; /* sensible default - gets overwritten in bootstrap */
 var gRowInfo = [];
 
@@ -55,10 +66,10 @@ function clearRowInfo(){
 
 function getRowInfo (pRowNumber){
     if (gRowInfo[pRowNumber]) {
-        return gRowInfo[pRowNumber];    
+        return gRowInfo[pRowNumber];
     } else {
         return {
-                y: (ENTITY_HEIGHT + (1.5*ARCROW_HEIGHT)) + pRowNumber*ARCROW_HEIGHT, 
+                y: (ENTITY_HEIGHT + (1.5*ARCROW_HEIGHT)) + pRowNumber*ARCROW_HEIGHT,
                 height: ARCROW_HEIGHT
         };
     }
@@ -67,11 +78,11 @@ function getRowInfo (pRowNumber){
 function setRowInfo (pRowNumber, pHeight, pY){
     if (pHeight === undefined || pHeight < ARCROW_HEIGHT){
         pHeight = ARCROW_HEIGHT;
-    } 
+    }
     if (pY === undefined){
         var lPreviousRowInfo = getRowInfo(pRowNumber - 1);
         if (lPreviousRowInfo && lPreviousRowInfo.y > 0){
-            pY = lPreviousRowInfo.y + (lPreviousRowInfo.height + pHeight)/2; 
+            pY = lPreviousRowInfo.y + (lPreviousRowInfo.height + pHeight)/2;
         } else { // TODO: this might be overkill
             pY = (ENTITY_HEIGHT + (1.5*ARCROW_HEIGHT)) + pRowNumber*ARCROW_HEIGHT;
         }
@@ -79,54 +90,19 @@ function setRowInfo (pRowNumber, pHeight, pY){
     gRowInfo[pRowNumber] = {y:pY, height: pHeight};
 }
 
-function wrap(pText, pMaxLength) {
-    var lCharCount = 0;
-    var lRetval = [];
-    var lStart = 0;
-    var lEnd = 0;
-
-    var i = 0;
-    var lText = pText.replace(/[\t\n]+/g, " ").replace(/\\n/g, "\n");
-
-    while (i <= lText.length) {
-        if (i === (lText.length)) {
-            lRetval.push(lText.substring(lStart, i));
-        } else if (lText[i] === '\n') {
-            lCharCount = 0;
-            lEnd = i;
-            lRetval.push(lText.substring(lStart, lEnd));
-            lStart = lEnd + 1;
-        } else if ((lCharCount++ >= pMaxLength)) {
-            lEnd = lText.substring(0, i).lastIndexOf(' ');
-            if (lEnd === -1 || lEnd < lStart) {
-                lCharCount = 1;
-                lEnd = i;
-                lNewStart = i;
-            } else {
-                lCharCount = 0;
-                lNewStart = lEnd + 1;
-            }
-            lRetval.push(lText.substring(lStart, lEnd));
-            lStart = lNewStart;
-        }
-        i++;
-    }
-    return lRetval;
-}
-
 function _clean (pParentElementId) {
-    lChildElement = document.getElementById("__svg_output");
+    var lChildElement = document.getElementById("__svg_output");
     if (lChildElement &&
             (lChildElement !== null) &&
             (lChildElement !== undefined)) {
-        lParentElement = document.getElementById(pParentElementId);
+        var lParentElement = document.getElementById(pParentElementId);
         lParentElement.removeChild(lChildElement);
     }
 }
 
 function bootstrap(pParentElementId, pSvgElementId) {
-    var SVGNS = new String ("http://www.w3.org/2000/svg");
-    var XLINKNS = new String ("http://www.w3.org/1999/xlink");
+    var SVGNS = "http://www.w3.org/2000/svg";
+    var XLINKNS = "http://www.w3.org/1999/xlink";
 
     var lParent = document.getElementById(pParentElementId);
     var lSkeletonSvg = document.createElementNS(SVGNS, "svg");
@@ -178,7 +154,7 @@ function bootstrap(pParentElementId, pSvgElementId) {
     lSkeletonSvg.appendChild(lBody);
     lParent.appendChild(lSkeletonSvg);
 
-    gTextHeight = utl.getBBox(utl.createText("ÁjyÎ9ƒ@", 0,0)).height; 
+    gTextHeight = utl.getBBox(utl.createText("ÁjyÎ9ƒ@", 0,0)).height;
 }
 
 function _renderAST (pAST, pSource, pParentElementId) {
@@ -199,11 +175,11 @@ function _renderAST (pAST, pSource, pParentElementId) {
         }
         if (pAST.options.arcgradient) {
             ARCROW_HEIGHT =
-                parseInt(pAST.options.arcgradient) + DEFAULT_ARCROW_HEIGHT;
-            ARC_GRADIENT = 
-                parseInt(pAST.options.arcgradient) + DEFAULT_ARC_GRADIENT;
+                parseInt(pAST.options.arcgradient, 10) + DEFAULT_ARCROW_HEIGHT;
+            ARC_GRADIENT =
+                parseInt(pAST.options.arcgradient, 10) + DEFAULT_ARC_GRADIENT;
         }
-        if (pAST.options.wordwraparcs){  
+        if (pAST.options.wordwraparcs){
             if (pAST.options.wordwraparcs === "true"){
                 WORDWRAPARCS = true;
             } else {
@@ -225,7 +201,7 @@ function _renderAST (pAST, pSource, pParentElementId) {
     
     var lCanvasHeight = lRowInfo.y + (lRowInfo.height/2) + 2*PAD_VERTICAL;
     var lHorizontalTransform = (PAD_HORIZONTAL + (INTER_ENTITY_SPACING/4));
-    var lVerticalTransform = PAD_VERTICAL; 
+    var lVerticalTransform = PAD_VERTICAL;
     var lScale = 1;
     var lSvgElement = document.getElementById("__svg_output");
 
@@ -241,7 +217,7 @@ function _renderAST (pAST, pSource, pParentElementId) {
      * of the canvas in the background layer.
      * 
      * We do this _before_ scaling are applied to the svg
-     */ 
+     */
     var lBgGroup = document.getElementById("__background");
     var lBgRect = utl.createRect(lCanvasWidth , lCanvasHeight, "bglayer", 0 - lHorizontalTransform, 0 - lVerticalTransform);
     lBgGroup.appendChild(lBgRect);
@@ -255,8 +231,8 @@ function _renderAST (pAST, pSource, pParentElementId) {
     }
 
     body.setAttribute("transform",
-            "translate("+ lHorizontalTransform + ","+ lVerticalTransform +")" 
-             + " scale(" + lScale + "," + lScale + ")");
+        "translate("+ lHorizontalTransform + ","+ lVerticalTransform +")" +
+        " scale(" + lScale + "," + lScale + ")");
     lSvgElement.setAttribute("width", lCanvasWidth.toString());
     lSvgElement.setAttribute("height", lCanvasHeight.toString());
 
@@ -268,9 +244,9 @@ function renderEntities (pEntities) {
     var lEntityXPos = 0;
     var i;
 
-    gEntity2X = new Object();
-    gEntity2ArcColor = new Object();
-    var arcColors = new Object();
+    gEntity2X = {};
+    gEntity2ArcColor = {};
+    var arcColors = {};
 
     if (pEntities) {
         for (i=0;i<pEntities.length;i++){
@@ -280,12 +256,15 @@ function renderEntities (pEntities) {
                 utl.createUse(lEntityXPos,0,pEntities[i].name));
             gEntity2X[pEntities[i].name] = lEntityXPos + (ENTITY_WIDTH/2);
             lEntityXPos += INTER_ENTITY_SPACING;
-            pEntities[i].arclinecolor ? 
-                arcColors.arclinecolor = pEntities[i].arclinecolor : null;
-            pEntities[i].arctextcolor ? 
-                arcColors.arctextcolor = pEntities[i].arctextcolor : null;
-            pEntities[i].arctextbgcolor ? 
-                arcColors.arctextbgcolor = pEntities[i].arctextbgcolor : null;
+            if (pEntities[i].arclinecolor) {
+                arcColors.arclinecolor = pEntities[i].arclinecolor;
+            }
+            if (pEntities[i].arctextcolor) {
+                arcColors.arctextcolor = pEntities[i].arctextcolor;
+            }
+            if (pEntities[i].arctextbgcolor) {
+                arcColors.arctextbgcolor = pEntities[i].arctextbgcolor;
+            }
             gEntity2ArcColor[pEntities[i].name] = arcColors;
         }
     }
@@ -300,8 +279,6 @@ function renderArcs (pArcs, pEntities) {
 
     var lLabel = "";
     var lArcEnd = gEntityXHWM - INTER_ENTITY_SPACING + ENTITY_WIDTH;
-    var lArcMiddle = lArcEnd/2;
-    var lNoEntities = pEntities.length;
 
     var i,j,k = 0;
 
@@ -324,55 +301,57 @@ function renderArcs (pArcs, pEntities) {
                         lArcRowOmit = true;
                         lElement = createEmptyArcText(lCurrentId,pArcs[i][j]);
                         lRowMemory.push ({id:lCurrentId, layer:sequence});
-                        break;
                         }
+                        break;
                     case ("|||"): {
                         lElement = createEmptyArcText(lCurrentId,pArcs[i][j]);
                         lRowMemory.push ({id:lCurrentId, layer:sequence});
-                        break;
                         }
+                        break;
                     case ("---"): {
                         lElement = createComment(lCurrentId,pArcs[i][j]);
                         lRowMemory.push ({id:lCurrentId, layer:sequence});
-                        break;
                         }
+                        break;
                     case("box"): case("rbox"): case("abox") : case("note"): {
                         lElement = createBox(lCurrentId,
                                              gEntity2X[pArcs[i][j].from],
                                              gEntity2X[pArcs[i][j].to],
                                              pArcs[i][j]);
                         lRowMemory.push ({id:lCurrentId, layer:notelayer});
-                        break;
                         }
+                        break;
                     default:{
+                        var xTo = 0;
+                        var xFrom = 0;
                         if (pArcs[i][j].from && pArcs[i][j].to) {
                             var lFrom = pArcs[i][j].from;
                             var lTo = pArcs[i][j].to;
                             if (lTo === "*"){
-                                var xFrom = gEntity2X[lFrom];
+                                xFrom = gEntity2X[lFrom];
                                 for (k=0;k<pEntities.length;k++){
                                     if (pEntities[k].name != lFrom) {
-                                        var xTo = gEntity2X[pEntities[k].name];
+                                        xTo = gEntity2X[pEntities[k].name];
                                         pArcs[i][j].label = "";
                                         defs.appendChild(
                                             createArc(lCurrentId + "bc" + k,
                                                       pArcs[i][j], xFrom, xTo
                                                        ));
-                                        lRowMemory.push ({id:lCurrentId + "bc" + k, layer:sequence});   
+                                        lRowMemory.push ({id:lCurrentId + "bc" + k, layer:sequence});
                                     }
                                 }
                                 pArcs[i][j].label=lLabel;
                                 
-                                lElement = 
+                                lElement =
                                     createTextLabel(lCurrentId + "_txt", pArcs[i][j],
                                         0, 0 - (gTextHeight/2) - LINE_WIDTH, lArcEnd)
                                 ;
-                                lRowMemory.push ({id:lCurrentId + "_txt", layer:sequence});   
+                                lRowMemory.push ({id:lCurrentId + "_txt", layer:sequence});
                             } else if (lFrom === "*") {
-                                var xTo = gEntity2X[lTo];
+                                xTo = gEntity2X[lTo];
                                 for (k=0;k<pEntities.length;k++){
                                     if (pEntities[k].name != lTo) {
-                                        var xFrom = gEntity2X[pEntities[k].name];
+                                        xFrom = gEntity2X[pEntities[k].name];
                                         pArcs[i][j].label ="";
                                         defs.appendChild(
                                             createArc(lCurrentId + "bc" + k,
@@ -382,20 +361,20 @@ function renderArcs (pArcs, pEntities) {
                                     }
                                 }
                                 pArcs[i][j].label=lLabel;
-                                lElement = 
+                                lElement =
                                     createTextLabel(lCurrentId + "_txt", pArcs[i][j],
                                         0, 0 - (gTextHeight/2) - LINE_WIDTH, lArcEnd)
                                 ;
-                                lRowMemory.push ({id:lCurrentId + "_txt", layer:sequence}); 
+                                lRowMemory.push ({id:lCurrentId + "_txt", layer:sequence});
                             } else {
-                                var xFrom = gEntity2X[lFrom];
-                                var xTo = gEntity2X[lTo];
+                                xFrom = gEntity2X[lFrom];
+                                xTo = gEntity2X[lTo];
                                 lElement = createArc(lCurrentId, pArcs[i][j], xFrom, xTo);
-                                lRowMemory.push ({id:lCurrentId, layer:sequence});    
+                                lRowMemory.push ({id:lCurrentId, layer:sequence});
                             }  /// lTo or lFrom === "*" 
                         } // if both a from and a to
-                        break;
                     } // case default 
+                    break;
                 } // switch
                 if (lElement){
                     setRowInfo (i, Math.max (getRowInfo(i).height, utl.getBBox(lElement).height + 2*LINE_WIDTH));
@@ -417,23 +396,26 @@ function renderArcs (pArcs, pEntities) {
             
             for (var m=0; m < lRowMemory.length; m++) {
                 lRowMemory[m].layer.appendChild(utl.createUse(0, getRowInfo(i).y, lRowMemory[m].id));
-            };
+            }
         } // for all rows
     } // if pArcs
 } // function
 
 function renderEntity (pId, pEntity) {
     var lGroup = utl.createGroup(pId);
-    var lRect = utl.createRect(ENTITY_WIDTH, ENTITY_HEIGHT);
-    
     if (!(pEntity.label)) {
         pEntity.label = pEntity.name;
     }
+    var lTextLabel = createTextLabel(pId + "_txt", pEntity,
+                0, ENTITY_HEIGHT/2, ENTITY_WIDTH, "entity");
+    // var lBBox = utl.getBBox(lTextLabel);
+    var lRect = utl.createRect(ENTITY_WIDTH, ENTITY_HEIGHT);
+    
+    // var lRect = utl.createRect(ENTITY_WIDTH, Math.max(lBBox.height, ENTITY_HEIGHT));
+    
     colorBox(lRect, pEntity);
     lGroup.appendChild(lRect);
-    lGroup.appendChild(
-            createTextLabel(pId + "_txt", pEntity,
-                0, ENTITY_HEIGHT/2, ENTITY_WIDTH, "entity")); 
+    lGroup.appendChild(lTextLabel);
     return lGroup;
 }
 
@@ -450,7 +432,7 @@ function renderArcRow(pEntities, pClass, pHeight, pId) {
 
     for (i=0;i<pEntities.length;i++){
         var lLine = utl.createLine (
-            lEntityXPos + (ENTITY_WIDTH/2), 0-(pHeight/2), 
+            lEntityXPos + (ENTITY_WIDTH/2), 0-(pHeight/2),
             lEntityXPos + (ENTITY_WIDTH/2),   (pHeight/2),
             pClass);
         // TODO #13: render associated marker(s) in <def>
@@ -467,7 +449,6 @@ function renderArcRow(pEntities, pClass, pHeight, pId) {
 function createSelfRefArc(pClass, pFrom, pYTo, pDouble) {
     var lHeight = 2*(ARCROW_HEIGHT/5);
     var lWidth  = INTER_ENTITY_SPACING/3;
-    var lSign = (pYTo < 0) ? -1 : 1;
 
     var lGroup = utl.createGroup("selfie");
     if (pDouble){
@@ -486,12 +467,15 @@ function arcColorOverride (pArc) {
             (pArc.direction === DIR_RTL) ? pArc.to : pArc.from;
 
         if (gEntity2ArcColor[lFrom] ) {
-            (!(pArc.linecolor) && gEntity2ArcColor[lFrom].arclinecolor) ?
-                pArc.linecolor = gEntity2ArcColor[lFrom].arclinecolor : 0;
-            (!(pArc.textcolor) && gEntity2ArcColor[lFrom].arctextcolor) ?
-                pArc.textcolor = gEntity2ArcColor[lFrom].arctextcolor : 0;
-            (!(pArc.textbgcolor) && gEntity2ArcColor[lFrom].arctextbgcolor) ?
-                pArc.textbgcolor = gEntity2ArcColor[lFrom].arctextbgcolor : 0;
+            if (!(pArc.linecolor) && gEntity2ArcColor[lFrom].arclinecolor) {
+                pArc.linecolor = gEntity2ArcColor[lFrom].arclinecolor;
+            }
+            if ((!(pArc.textcolor) && gEntity2ArcColor[lFrom].arctextcolor) ) {
+                pArc.textcolor = gEntity2ArcColor[lFrom].arctextcolor;
+            }
+            if (!(pArc.textbgcolor) && gEntity2ArcColor[lFrom].arctextbgcolor) {
+                pArc.textbgcolor = gEntity2ArcColor[lFrom].arctextbgcolor;
+            }
         }
     }
     return pArc;
@@ -500,111 +484,130 @@ function arcColorOverride (pArc) {
 function createArc (pId, pArc, pFrom, pTo) {
     var lGroup = utl.createGroup(pId);
     var lClass = "";
-    var lLabel = pArc.label ? pArc.label : undefined;
     var lArcGradient = ARC_GRADIENT;
     var lDoubleLine = false;
-
+    var pTmp = 0;
 
     switch(pArc.kind) {
         case ("->"): {
-            lClass = "signal";
-            pArc.direction = DIR_LTR;
+                lClass = "signal";
+                pArc.direction = DIR_LTR;
+            }
             break;
-        } case ("<-"): {
-            lClass = "signal";
-            pArc.direction = DIR_RTL;
-            var pTmp = pTo; pTo = pFrom; pFrom = pTmp;
+        case ("<-"): {
+                lClass = "signal";
+                pArc.direction = DIR_RTL;
+                pTmp = pTo; pTo = pFrom; pFrom = pTmp;
+            }
             break;
-        } case ("<->"): {
-            lClass = "signal-both";
-            pArc.direction = DIR_BOTH;
+        case ("<->"): {
+                lClass = "signal-both";
+                pArc.direction = DIR_BOTH;
+            }
             break;
-        } case ("--"): {
+        case ("--"): {
+                pArc.direction = DIR_NONE;
+            }
+            break;
+        case ("=>"): {
+                lClass = "method";
+                pArc.direction = DIR_LTR;
+            }
+            break;
+        case ("<="): {
+                lClass = "method";
+                pArc.direction = DIR_RTL;
+                pTmp = pTo; pTo = pFrom; pFrom = pTmp;
+            }
+            break;
+        case ("<=>"): {
+                lClass = "method-both";
+                pArc.direction = DIR_BOTH;
+            }
+            break;
+        case ("=="): {
+                pArc.direction = DIR_NONE;
+            }
+            break;
+        case (">>"):{
+                lClass = "returnvalue";
+                pArc.direction = DIR_LTR;
+            }
+            break;
+        case ("<<"): {
+                lClass = "returnvalue";
+                pArc.direction = DIR_RTL;
+                pTmp = pTo; pTo = pFrom; pFrom = pTmp;
+            }
+            break;
+        case ("<<>>"):{
+                lClass = "returnvalue-both";
+                pArc.direction = DIR_BOTH;
+            }
+            break;
+        case (".."): {
+                lClass = "dotted";
+                pArc.direction = DIR_NONE;
+            }
+            break;
+        case ("=>>"): {
+                lClass = "callback";
+                pArc.direction = DIR_LTR;
+            }
+            break;
+        case ("<<="): {
+                lClass = "callback";
+                pArc.direction = DIR_RTL;
+                pTmp = pTo; pTo = pFrom; pFrom = pTmp;
+            }
+            break;
+        case ("<<=>>"): {
+                lClass = "callback-both";
+                pArc.direction = DIR_BOTH;
+            }
+            break;
+        case (":>"): {
+                lClass = "emphasised";
+                pArc.direction = DIR_LTR;
+                lDoubleLine = true;
+            }
+            break;
+        case ("<:"): {
+                lClass = "emphasised";
+                pArc.direction = DIR_RTL;
+                lDoubleLine = true;
+                pTmp = pTo; pTo = pFrom; pFrom = pTmp;
+            }
+            break;
+        case ("<:>"): {
+                lDoubleLine = true;
+                pArc.direction = DIR_BOTH;
+                lClass = "emphasised-both";
+            }
+            break;
+        case ("::"): {
+                lClass = "double";
+                pArc.direction = DIR_NONE;
+                lDoubleLine = true;
+            }
+            break;
+        case ("-x"): case("-X"): {
+                lClass = "lost";
+                pArc.direction = DIR_LTR;
+                pTo =  pFrom + (pTo - pFrom)*(3/4);
+            }
+            break;
+        case ("x-"): case("X-"): {
+                lClass = "lost";
+                pArc.direction = DIR_RTL;
+                pTmp = pTo;
+                pTo = pFrom;
+                pFrom = pTmp;
+                pTo =  pFrom + (pTo - pFrom)*(3/4);
+            }
+            break;
+        default : {
             pArc.direction = DIR_NONE;
-            break;
-        } case ("=>"): {
-            lClass = "method";
-            pArc.direction = DIR_LTR;
-            break;
-        } case ("<="): {
-            lClass = "method";
-            pArc.direction = DIR_RTL;
-            var pTmp = pTo; pTo = pFrom; pFrom = pTmp;
-            break;
-        } case ("<=>"): {
-            lClass = "method-both";
-            pArc.direction = DIR_BOTH;
-            break;
-        } case ("=="): {
-            pArc.direction = DIR_NONE;
-            break;
-        } case (">>"):{
-            lClass = "returnvalue";
-            pArc.direction = DIR_LTR;
-            break;
-        } case ("<<"): {
-            lClass = "returnvalue";
-            pArc.direction = DIR_RTL;
-            var pTmp = pTo; pTo = pFrom; pFrom = pTmp;
-            break;
-        } case ("<<>>"):{
-            lClass = "returnvalue-both";
-            pArc.direction = DIR_BOTH;
-            break;
-        } case (".."): {
-            lClass = "dotted";
-            pArc.direction = DIR_NONE;
-            break;
-        } case ("=>>"): {
-            lClass = "callback";
-            pArc.direction = DIR_LTR;
-            break;
-        } case ("<<="): {
-            lClass = "callback";
-            pArc.direction = DIR_RTL;
-            var pTmp = pTo; pTo = pFrom; pFrom = pTmp;
-            break;
-        } case ("<<=>>"): {
-            lClass = "callback-both";
-            pArc.direction = DIR_BOTH;
-            break;
-        } case (":>"): {
-            lClass = "emphasised";
-            pArc.direction = DIR_LTR;
-            lDoubleLine = true;
-            break;
-        } case ("<:"): {
-            lClass = "emphasised";
-            pArc.direction = DIR_RTL;
-            lDoubleLine = true;
-            var pTmp = pTo; pTo = pFrom; pFrom = pTmp;
-            break;
-        } case ("<:>"): {
-            lDoubleLine = true;
-            pArc.direction = DIR_BOTH;
-            lClass = "emphasised-both";
-            break;
-        } case ("::"): {
-            lClass = "double";
-            pArc.direction = DIR_NONE;
-            lDoubleLine = true;
-            break;
-        } case ("-x"): case("-X"): {
-            lClass = "lost";
-            pArc.direction = DIR_LTR;
-            pTo =  pFrom + (pTo - pFrom)*(3/4);
-            break;
-        } case ("x-"): case("X-"): {
-            lClass = "lost";
-            pArc.direction = DIR_RTL;
-            var pTmp = pTo;
-            pTo = pFrom;
-            pFrom = pTmp;
-            pTo =  pFrom + (pTo - pFrom)*(3/4);
-            break;
-        } default : {
-            pArc.direction = DIR_NONE;
-            break;
         }
     }
     pArc = arcColorOverride (pArc);
@@ -618,7 +621,7 @@ function createArc (pId, pArc, pFrom, pTo) {
     /* for one line labels add an end of line so it gets 
      * rendered above the arc in stead of directly on it.
      * TODO: kludgy?
-     */ 
+     */
     if (pArc.label && (pArc.label.indexOf('\\n')===-1)){
         pArc.label += "\\n";
     }
@@ -647,55 +650,34 @@ function createArc (pId, pArc, pFrom, pTo) {
     return lGroup;
 }
 
-
-function unescapeString(pString) {
-    var lLabel = pString.replace (/\\\"/g, '"');
-    return lLabel;//.replace(/\\n/g, " ");
-}
-
-
-function determineMaxTextWidth(pWidth) {
-    var lAbsWidth = Math.abs(pWidth);
-    var lMagicFactor = lAbsWidth / 8;
-        
-   if (lAbsWidth > 160 && lAbsWidth <= 320){
-        lMagicFactor = lAbsWidth / 6.4;
-    } else if (lAbsWidth > 320 && lAbsWidth <= 480){
-        lMagicFactor = lAbsWidth / 5.9;
-    } else if (lAbsWidth > 480)  {
-        lMagicFactor = lAbsWidth / 5.6; 
-    }
-    return lMagicFactor;
-}
-
-
 function createTextLabel (pId, pArc, pStartX, pStartY, pWidth, pClass) {
     var lGroup = utl.createGroup(pId);
 
     if (pArc.label) {
         var lMiddle = pStartX + (pWidth/2);
-        pArc.label = unescapeString(pArc.label);
-        pArc.id = pArc.id ? unescapeString(pArc.id) : undefined;
+        pArc.label = txt.unescapeString(pArc.label);
+        if (pArc.id){
+            pArc.id = txt.unescapeString(pArc.id);
+        }
 
         var lLines = pArc.label.split('\\n');
-        switch(pArc.kind){ 
+        var lMaxTextWidthInChars = txt.determineMaxTextWidth(pWidth);
+        switch(pArc.kind){
             case("box"): case("rbox"): case("abox"): case("note"): case(undefined):{
-                var lMaxTextWidthInChars = determineMaxTextWidth(pWidth);
-                lLines = wrap(pArc.label, lMaxTextWidthInChars);
-                break;
+                lLines = txt.wrap(pArc.label, lMaxTextWidthInChars);
             }
+            break;
             default: {
                 if (WORDWRAPARCS){
-                    var lMaxTextWidthInChars = determineMaxTextWidth(pWidth);
-                    lLines = wrap(pArc.label, lMaxTextWidthInChars);
+                    lLines = txt.wrap(pArc.label, lMaxTextWidthInChars);
                 }
             }
-        } 
+        }
         
         pStartY = pStartY - (((lLines.length-1)*gTextHeight)/2) - ((lLines.length-1)/2);
         for (var i = 0; i < lLines.length; i++) {
-            var lText = new Object();
-            var lBBox = new Object();
+            var lText = {};
+            var lBBox = {};
             if (i===0){
                 lText = utl.createText(lLines[i], lMiddle, pStartY + gTextHeight/4 + (i*gTextHeight), pClass, pArc.url, pArc.id, pArc.idurl);
                 lBBox = utl.getBBox(lText);
@@ -746,14 +728,14 @@ function createComment (pId, pArc) {
 
 function colorText (pElement, pArc){
     if (pArc.textcolor) {
-        var lStyleString = new String();
+        var lStyleString = "";
         lStyleString += "fill:" + pArc.textcolor + ";";
         pElement.setAttribute("style", lStyleString);
     }
 }
 
 function colorBox (pElement, pArc) {
-    var lStyleString = new String();
+    var lStyleString = "";
     if (pArc.textbgcolor) {
         lStyleString += "fill:" + pArc.textbgcolor + ";";
     }
@@ -778,18 +760,20 @@ function createBox (pId, pFrom, pTo, pArc) {
     var lHeight = Math.max(lBBox.height + 2*LINE_WIDTH, ARCROW_HEIGHT - 2*LINE_WIDTH);
     
     switch (pArc.kind) {
-          case ("rbox") : {
-          lBox = utl.createRect(lWidth, lHeight, "box", lStart, (0-lHeight/2), 6, 6);
-          break;
-        } case ("abox") : {
-          lBox = utl.createABox(lWidth, lHeight, "box", lStart, 0);
-          break;
-        } case ("note") : {
-          lBox = utl.createNote(lWidth, lHeight, "box", lStart, (0-lHeight/2));
-          break;
-        } default : {
-          lBox = utl.createRect(lWidth, lHeight, "box", lStart, (0-lHeight/2));
-          break;
+        case ("rbox") : {
+            lBox = utl.createRect(lWidth, lHeight, "box", lStart, (0-lHeight/2), 6, 6);
+        }
+        break;
+        case ("abox") : {
+            lBox = utl.createABox(lWidth, lHeight, "box", lStart, 0);
+        }
+        break;
+        case ("note") : {
+            lBox = utl.createNote(lWidth, lHeight, "box", lStart, (0-lHeight/2));
+        }
+        break;
+        default : {
+            lBox = utl.createRect(lWidth, lHeight, "box", lStart, (0-lHeight/2));
         }
     }
     colorBox (lBox, pArc);
@@ -800,7 +784,8 @@ function createBox (pId, pFrom, pTo, pArc) {
 }
 
 
-var gSvgStyleElementString = 
+var gSvgStyleElementString =
+/*jshint multistr:true */
 "svg { \
     font-family: Helvetica, sans-serif; \
     font-size: 9pt; \
@@ -916,7 +901,7 @@ path { \
 } \
 .comment { \
     stroke-dasharray: 5,2; \
-}"; 
+}";
 return {
     clean : function (pParentElementId) {
                 _clean(pParentElementId);

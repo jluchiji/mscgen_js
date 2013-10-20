@@ -2,10 +2,13 @@
  * takes a simplified message sequence chart program and translates
  * to an mscgen program
  */
+/* jshint indent:4 */
+/* jshint node:true */
+
 var parser = require ("./msgennyparser_node");
 var ast2mscgen = require ("./ast2mscgen");
 
-var gInput = new String();
+var gInput = "";
 
 process.stdin.resume();
 process.stdin.setEncoding('utf8');
